@@ -14,16 +14,148 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meals: {
+        Row: {
+          claimed_by: string | null
+          created_at: string
+          id: string
+          meal_date: string
+          price: number
+          released_at: string | null
+          slot: Database["public"]["Enums"]["meal_slot"]
+          status: Database["public"]["Enums"]["meal_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          meal_date: string
+          price: number
+          released_at?: string | null
+          slot: Database["public"]["Enums"]["meal_slot"]
+          status?: Database["public"]["Enums"]["meal_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          meal_date?: string
+          price?: number
+          released_at?: string | null
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          status?: Database["public"]["Enums"]["meal_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          bank_balance: number
+          created_at: string
+          full_name: string
+          id: string
+          registration_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bank_balance?: number
+          created_at?: string
+          full_name: string
+          id?: string
+          registration_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bank_balance?: number
+          created_at?: string
+          full_name?: string
+          id?: string
+          registration_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          meal_id: string | null
+          note: string
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          note: string
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          note?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "staff"
+      meal_slot: "breakfast" | "lunch" | "dinner"
+      meal_status: "logged" | "eaten" | "released" | "claimed" | "forfeited"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +282,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "staff"],
+      meal_slot: ["breakfast", "lunch", "dinner"],
+      meal_status: ["logged", "eaten", "released", "claimed", "forfeited"],
+    },
   },
 } as const
