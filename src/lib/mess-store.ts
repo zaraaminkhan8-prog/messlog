@@ -3,7 +3,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export type Role = "student" | "guard" | "admin";
+export type Role = "student" | "admin";
 
 export type User = {
   id: string;
@@ -11,7 +11,13 @@ export type User = {
   password: string;
   name: string;
   role: Role;
-  walletBalance: number; // only meaningful for students
+  walletBalance: number;
+};
+
+export type Guard = {
+  id: string;
+  name: string;
+  phone: string;
 };
 
 export type MealSlot = "breakfast" | "lunch" | "snacks" | "dinner";
@@ -20,16 +26,15 @@ export type Meal = {
   id: string;
   studentId: string;
   studentName: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   slot: MealSlot;
   price: number;
-  // lifecycle
   status:
-    | "messed-in" // default
-    | "cancelled-early" // refund 90% / 10% to uni
-    | "released" // available for guard during mess time
-    | "claimed" // guard ate it: 40% to student, 50% guard pays, 10% uni
-    | "consumed"; // student ate
+    | "messed-in"
+    | "cancelled-early"
+    | "released"
+    | "claimed"
+    | "consumed";
   claimedByGuardId?: string;
   claimedByGuardName?: string;
 };
@@ -46,17 +51,27 @@ export type Transaction = {
     | "refund-claimed"
     | "uni-fee"
     | "guard-payment";
-  amount: number; // positive = credit to user, negative = debit
+  amount: number;
   note: string;
   mealId?: string;
 };
 
+export type SmsMessage = {
+  id: string;
+  ts: number;
+  toName: string;
+  toPhone: string;
+  body: string;
+  mealId: string;
+};
+
 type State = {
   users: User[];
+  guards: Guard[];
   meals: Meal[];
   transactions: Transaction[];
+  smsLog: SmsMessage[];
   currentUserId: string | null;
-  // demo "now" — defaults to real now; admin can shift to test refund logic
   clockOffsetMs: number;
 };
 
@@ -99,14 +114,6 @@ function seed(): State {
       walletBalance: 2750,
     },
     {
-      id: "g1",
-      email: "guard1@uni.edu",
-      password: "demo",
-      name: "Ramesh (Gate 2)",
-      role: "guard",
-      walletBalance: 0,
-    },
-    {
       id: "a1",
       email: "admin@uni.edu",
       password: "demo",
@@ -114,6 +121,11 @@ function seed(): State {
       role: "admin",
       walletBalance: 0,
     },
+  ];
+  const guards: Guard[] = [
+    { id: "g1", name: "Ramesh (Gate 2)", phone: "+91 98xxx 11122" },
+    { id: "g2", name: "Suresh (Gate 1)", phone: "+91 98xxx 33344" },
+    { id: "g3", name: "Vikram (Night)", phone: "+91 98xxx 55566" },
   ];
   const today = todayStr(new Date());
   const meals: Meal[] = (["breakfast", "lunch", "snacks", "dinner"] as MealSlot[]).flatMap(
@@ -141,7 +153,15 @@ function seed(): State {
       amount: 3000,
       note: "Monthly mess wallet credit",
     }));
-  return { users, meals, transactions, currentUserId: null, clockOffsetMs: 0 };
+  return {
+    users,
+    guards,
+    meals,
+    transactions,
+    smsLog: [],
+    currentUserId: null,
+    clockOffsetMs: 0,
+  };
 }
 
 function load(): State {
@@ -274,31 +294,44 @@ export const messStore = {
     }
 
     if (during || minutesLeft < 120) {
-      // Release for guards
+      // Release: send a mock SMS to all guards
+      const smsBody = `MessWise: ${meal.studentName}'s ${meal.slot} (₹${meal.price}) is available — claim it at the mess for 50% off (₹${Math.round(meal.price * 0.5)}).`;
+      const newSms: SmsMessage[] = state.guards.map((g) => ({
+        id: crypto.randomUUID(),
+        ts: Date.now(),
+        toName: g.name,
+        toPhone: g.phone,
+        body: smsBody,
+        mealId,
+      }));
       setState((s) => ({
         ...s,
         meals: s.meals.map((m) =>
           m.id === mealId ? { ...m, status: "released" } : m,
         ),
+        smsLog: [...newSms, ...s.smsLog],
       }));
       return {
         ok: true,
-        message: "Released to guards. You'll get 40% if it's claimed.",
+        message: `SMS sent to ${state.guards.length} guards. You'll get 40% if claimed.`,
       };
     }
     return { ok: false, message: "Cannot cancel" };
   },
 
-  // Guard claims a released meal
-  claimMeal: (mealId: string, guardId: string): { ok: boolean; message: string } => {
+  // Admin marks a released meal as claimed by a specific guard (in person)
+  markMealClaimed: (
+    mealId: string,
+    guardId: string,
+  ): { ok: boolean; message: string } => {
     const meal = state.meals.find((m) => m.id === mealId);
-    const guard = state.users.find((u) => u.id === guardId);
+    const guard = state.guards.find((g) => g.id === guardId);
     if (!meal || !guard) return { ok: false, message: "Not found" };
-    if (meal.status !== "released") return { ok: false, message: "Already claimed" };
+    if (meal.status !== "released") return { ok: false, message: "Already processed" };
 
     const guardPays = Math.round(meal.price * 0.5);
     const studentGets = Math.round(meal.price * 0.4);
-    const uniGets = meal.price - guardPays - studentGets; // remainder = 10%
+    const uniGets = meal.price - guardPays - studentGets;
 
     setState((s) => ({
       ...s,
@@ -331,27 +364,17 @@ export const messStore = {
         {
           id: crypto.randomUUID(),
           ts: Date.now(),
-          userId: guard.id,
-          userName: guard.name,
-          type: "guard-payment",
-          amount: -guardPays,
-          note: `Claimed ${meal.studentName}'s ${meal.slot} (paid 50%)`,
-          mealId,
-        },
-        {
-          id: crypto.randomUUID(),
-          ts: Date.now(),
           userId: "uni",
           userName: "University",
           type: "uni-fee",
           amount: uniGets,
-          note: `Service fee: ${meal.slot} claim`,
+          note: `Service fee: ${meal.slot} claim (₹${guardPays} collected from guard at mess)`,
           mealId,
         },
         ...s.transactions,
       ],
     }));
-    return { ok: true, message: `Enjoy your ${meal.slot}, ${guard.name}!` };
+    return { ok: true, message: `Marked claimed by ${guard.name}` };
   },
 
   // Admin: simulate end-of-day so messed-in meals charge wallets

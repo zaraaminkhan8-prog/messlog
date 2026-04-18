@@ -1,8 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell, formatINR } from "@/components/AppShell";
-import { messStore, useMessStore } from "@/lib/mess-store";
+import { messStore, useMessStore, SLOT_LABEL } from "@/lib/mess-store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast, Toaster } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -21,8 +29,10 @@ function AdminPage() {
 
 function AdminBody() {
   const users = useMessStore((s) => s.users);
+  const guards = useMessStore((s) => s.guards);
   const meals = useMessStore((s) => s.meals);
   const transactions = useMessStore((s) => s.transactions);
+  const smsLog = useMessStore((s) => s.smsLog);
 
   const uniRevenue = transactions
     .filter((t) => t.userId === "uni")
@@ -30,7 +40,7 @@ function AdminBody() {
   const refundsToStudents = transactions
     .filter((t) => t.type === "refund-early" || t.type === "refund-claimed")
     .reduce((sum, t) => sum + t.amount, 0);
-  const released = meals.filter((m) => m.status === "released").length;
+  const released = meals.filter((m) => m.status === "released");
   const claimed = meals.filter((m) => m.status === "claimed").length;
 
   function endOfDay() {
@@ -43,7 +53,7 @@ function AdminBody() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPI label="University revenue" value={formatINR(uniRevenue)} accent />
         <KPI label="Refunded to students" value={formatINR(refundsToStudents)} />
-        <KPI label="Released today" value={String(released)} />
+        <KPI label="Released now" value={String(released.length)} />
         <KPI label="Claimed by guards" value={String(claimed)} />
       </div>
 
@@ -69,6 +79,53 @@ function AdminBody() {
               Reset demo
             </Button>
           </div>
+        </div>
+      </Card>
+
+      <Card className="rounded-3xl border-border/60 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Released meals</h2>
+            <p className="text-sm text-muted-foreground">
+              When a guard collects the meal, mark it claimed and pick the guard.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 space-y-3">
+          {released.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              No released meals right now.
+            </p>
+          )}
+          {released.map((m) => (
+            <ReleasedRow key={m.id} mealId={m.id} />
+          ))}
+        </div>
+      </Card>
+
+      <Card className="rounded-3xl border-border/60 p-6">
+        <h2 className="font-display text-lg font-semibold">SMS log to guards</h2>
+        <p className="text-sm text-muted-foreground">
+          (Demo) Each release sends an SMS to all {guards.length} guards on duty.
+        </p>
+        <div className="mt-3 max-h-72 divide-y divide-border/60 overflow-auto">
+          {smsLog.length === 0 && (
+            <p className="py-3 text-sm text-muted-foreground">No SMS sent yet.</p>
+          )}
+          {smsLog.slice(0, 50).map((s) => (
+            <div key={s.id} className="py-3 text-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">
+                  {s.toName}{" "}
+                  <span className="text-muted-foreground">· {s.toPhone}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(s.ts).toLocaleTimeString()}
+                </p>
+              </div>
+              <p className="mt-1 rounded-lg bg-muted/60 p-2 text-xs">{s.body}</p>
+            </div>
+          ))}
         </div>
       </Card>
 
@@ -112,6 +169,51 @@ function AdminBody() {
           ))}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function ReleasedRow({ mealId }: { mealId: string }) {
+  const meal = useMessStore((s) => s.meals.find((m) => m.id === mealId));
+  const guards = useMessStore((s) => s.guards);
+  const [guardId, setGuardId] = useState<string>(guards[0]?.id ?? "");
+  if (!meal) return null;
+
+  function confirm() {
+    if (!guardId) return toast.error("Pick a guard");
+    const r = messStore.markMealClaimed(mealId, guardId);
+    if (r.ok) toast.success(r.message);
+    else toast.error(r.message);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="font-display text-base font-semibold">
+          {SLOT_LABEL[meal.slot]} · {meal.studentName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Guard pays {formatINR(Math.round(meal.price * 0.5))} at the mess · Student
+          gets {formatINR(Math.round(meal.price * 0.4))} back
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Select value={guardId} onValueChange={setGuardId}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Pick guard" />
+          </SelectTrigger>
+          <SelectContent>
+            {guards.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={confirm}>
+          Mark claimed
+        </Button>
+      </div>
     </div>
   );
 }

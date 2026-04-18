@@ -120,7 +120,6 @@ function Landing() {
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <DemoChip label="Student" onClick={() => quickLogin("aarav@uni.edu")} />
-              <DemoChip label="Guard" onClick={() => quickLogin("guard1@uni.edu")} />
               <DemoChip label="Admin" onClick={() => quickLogin("admin@uni.edu")} />
             </div>
           </div>
@@ -131,7 +130,7 @@ function Landing() {
         <div className="mx-auto grid max-w-6xl gap-6 px-6 py-16 md:grid-cols-3">
           <Step n="1" title="Mess in by default" body="Every meal slot is billed unless you opt out." />
           <Step n="2" title="Skip 2h early" body="90% refund hits your wallet instantly. 10% covers admin." />
-          <Step n="3" title="Release at meal time" body="Guards claim it for 50% off. You get 40% back." />
+          <Step n="3" title="Release at meal time" body="Guards get an SMS, claim it for 50% off. You get 40% back." />
         </div>
       </section>
 
