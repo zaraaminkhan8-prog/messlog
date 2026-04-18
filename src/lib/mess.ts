@@ -1,5 +1,5 @@
 // Pricing & meal-window logic for MessLog @ GIKI.
-// Prices: breakfast Rs 350, lunch Rs 560, dinner Rs 560.
+// Prices: breakfast Rs 350, lunch+dinner combined Rs 560 (Rs 280 each).
 // Lunch & dinner are bundled — students cannot opt for one without the other.
 // Logging window: before 10:00 AM for today, or after 10:00 PM for tomorrow.
 
@@ -8,8 +8,8 @@ export type BundleSlot = "breakfast" | "lunch_dinner";
 
 export const SLOT_PRICE: Record<Slot, number> = {
   breakfast: 350,
-  lunch: 560,
-  dinner: 560,
+  lunch: 280,
+  dinner: 280,
 };
 
 export const SLOT_LABEL: Record<Slot, string> = {
