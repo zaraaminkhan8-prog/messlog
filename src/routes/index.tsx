@@ -1,58 +1,30 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { messStore, useMessStore } from "@/lib/mess-store";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { SLOT_PRICE, formatINR } from "@/lib/mess";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MessWise — Fair mess billing for students" },
-      {
-        name: "description",
-        content:
-          "Skip a meal, get refunded. Release it to guards, share the cost. A fair, transparent mess wallet for universities.",
-      },
-      { property: "og:title", content: "MessWise — Fair mess billing for students" },
-      {
-        property: "og:description",
-        content: "Stop paying for meals you don't eat. Transparent wallet, instant refunds.",
-      },
+      { title: "MessLog — Log mess meals fairly" },
+      { name: "description", content: "Opt in for breakfast, lunch & dinner before the deadline. Get 40% back when staff claim a meal you skipped." },
+      { property: "og:title", content: "MessLog — Log mess meals fairly" },
+      { property: "og:description", content: "Stop paying for meals you don't eat. Real-time meal logging tied to your bank balance." },
     ],
   }),
   component: Landing,
 });
 
 function Landing() {
+  const { user, role, loading } = useAuth();
   const navigate = useNavigate();
-  const current = useMessStore((s) => s.users.find((u) => u.id === s.currentUserId) ?? null);
 
   useEffect(() => {
-    if (current) {
-      navigate({ to: `/${current.role}` as "/student" });
-    }
-  }, [current, navigate]);
-
-  const [email, setEmail] = useState("aarav@uni.edu");
-  const [password, setPassword] = useState("demo");
-  const [error, setError] = useState("");
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    const u = messStore.login(email, password);
-    if (!u) return setError("Invalid credentials. Try a demo account below.");
-    navigate({ to: `/${u.role}` as "/student" });
-  }
-
-  function quickLogin(em: string) {
-    setEmail(em);
-    setPassword("demo");
-    const u = messStore.login(em, "demo");
-    if (u) navigate({ to: `/${u.role}` as "/student" });
-  }
+    if (loading) return;
+    if (user && role) navigate({ to: role === "staff" ? "/staff" : "/dashboard" });
+  }, [user, role, loading, navigate]);
 
   return (
     <main className="min-h-screen">
@@ -61,118 +33,70 @@ function Landing() {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-[image:var(--gradient-hero)] text-primary-foreground font-display text-lg font-bold">
             M
           </div>
-          <span className="font-display text-xl font-semibold">MessWise</span>
+          <span className="font-display text-xl font-semibold">MessLog</span>
         </div>
-        <a
-          href="#login"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          Sign in
-        </a>
+        <Link to="/auth">
+          <Button variant="outline" size="sm">Sign in</Button>
+        </Link>
       </header>
 
       <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-20 pt-8 lg:grid-cols-2 lg:gap-16">
         <div className="flex flex-col justify-center">
           <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-accent/30 px-3 py-1 text-xs font-medium text-accent-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" /> University mess, redesigned
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Built for university hostels
           </span>
           <h1 className="font-display text-5xl leading-[1.05] font-semibold tracking-tight md:text-6xl">
-            Stop paying for meals <em className="text-primary">you didn't eat.</em>
+            Pay only for the meals <em className="text-primary">you actually log.</em>
           </h1>
           <p className="mt-5 max-w-lg text-lg text-muted-foreground">
-            Mess in by default. Skip 2 hours early to get <b>90% back</b>. Release a meal at
-            mess time and a guard can claim it — you still get <b>40%</b> back.
+            Log meals before <b>10 AM</b> for today or after <b>10 PM</b> for tomorrow.
+            Forgot to opt out? Release the meal — if staff claim it, you get <b>40%</b> back.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <Stat title="To student" value="40–90%" />
-            <Stat title="To university" value="10%" />
-            <Stat title="To guard" value="50% off meal" />
+            <PriceCard slot="Breakfast" price={SLOT_PRICE.breakfast} />
+            <PriceCard slot="Lunch" price={SLOT_PRICE.lunch} />
+            <PriceCard slot="Dinner" price={SLOT_PRICE.dinner} />
+          </div>
+          <div className="mt-8 flex gap-3">
+            <Link to="/auth">
+              <Button size="lg">Get started</Button>
+            </Link>
           </div>
         </div>
 
-        <Card id="login" className="rounded-3xl border-border/60 p-8 shadow-[var(--shadow-soft)]">
-          <h2 className="font-display text-2xl font-semibold">Sign in</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Use your university email. This demo runs locally.
-          </p>
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="em">University email</Label>
-              <Input id="em" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pw">Password</Label>
-              <Input
-                id="pw"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" size="lg">
-              Sign in
-            </Button>
-          </form>
-          <div className="mt-6 border-t border-border/60 pt-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Quick demo logins
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <DemoChip label="Student" onClick={() => quickLogin("aarav@uni.edu")} />
-              <DemoChip label="Admin" onClick={() => quickLogin("admin@uni.edu")} />
-            </div>
-          </div>
+        <Card className="rounded-3xl border-border/60 p-8 shadow-[var(--shadow-soft)]">
+          <h2 className="font-display text-2xl font-semibold">How it works</h2>
+          <ol className="mt-6 space-y-5">
+            <Step n={1} title="Sign up with your reg. number" body="Pick student or staff. Your meal history and bank balance live in your account." />
+            <Step n={2} title="Log meals in the open window" body="Before 10 AM or after 10 PM — you're locked in for that meal." />
+            <Step n={3} title="Forgot to skip? Release it" body="Staff sees the released meal and can claim it for free. You get 40% refunded — otherwise 0%." />
+            <Step n={4} title="Bank reminders" body="Dashboard nudges you to top up if your linked balance can't cover the month." />
+          </ol>
         </Card>
       </section>
-
-      <section className="border-t border-border/60 bg-card/50">
-        <div className="mx-auto grid max-w-6xl gap-6 px-6 py-16 md:grid-cols-3">
-          <Step n="1" title="Mess in by default" body="Every meal slot is billed unless you opt out." />
-          <Step n="2" title="Skip 2h early" body="90% refund hits your wallet instantly. 10% covers admin." />
-          <Step n="3" title="Release at meal time" body="Guards get an SMS, claim it for 50% off. You get 40% back." />
-        </div>
-      </section>
-
-      <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
-        Built for fairer campus dining ·{" "}
-        <Link to="/" className="underline-offset-2 hover:underline">
-          MessWise
-        </Link>
-      </footer>
     </main>
   );
 }
 
-function Stat({ title, value }: { title: string; value: string }) {
+function PriceCard({ slot, price }: { slot: string; price: number }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-4">
-      <p className="font-display text-2xl font-semibold text-primary">{value}</p>
-      <p className="text-xs text-muted-foreground">{title}</p>
+      <p className="font-display text-2xl font-semibold text-primary">{formatINR(price)}</p>
+      <p className="text-xs text-muted-foreground">{slot}</p>
     </div>
   );
 }
 
-function DemoChip({ label, onClick }: { label: string; onClick: () => void }) {
+function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition hover:bg-accent/40"
-    >
-      {label} →
-    </button>
-  );
-}
-
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
-  return (
-    <div className="rounded-2xl bg-card p-6 shadow-[var(--shadow-card)]">
-      <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 font-display text-sm font-semibold text-primary">
+    <li className="flex gap-4">
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-display text-sm font-semibold text-primary">
         {n}
       </div>
-      <h3 className="mt-4 font-display text-lg font-semibold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-    </div>
+      <div>
+        <h3 className="font-display text-base font-semibold">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+      </div>
+    </li>
   );
 }

@@ -1,26 +1,29 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { messStore, useMessStore, type Role } from "@/lib/mess-store";
+import { type ReactNode, useEffect } from "react";
+import { useAuth, type AppRole } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { useEffect, type ReactNode } from "react";
 
 export function AppShell({
   role,
   title,
   children,
 }: {
-  role: Role;
+  role: AppRole;
   title: string;
   children: ReactNode;
 }) {
-  const user = useMessStore((s) => s.users.find((u) => u.id === s.currentUserId) ?? null);
+  const { user, role: userRole, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) navigate({ to: "/" });
-    else if (user.role !== role) navigate({ to: `/${user.role}` as "/student" });
-  }, [user, role, navigate]);
+    if (loading) return;
+    if (!user) navigate({ to: "/auth" });
+    else if (userRole && userRole !== role) {
+      navigate({ to: userRole === "staff" ? "/staff" : "/dashboard" });
+    }
+  }, [user, userRole, loading, role, navigate]);
 
-  if (!user) return null;
+  if (loading || !user) return null;
 
   return (
     <div className="min-h-screen">
@@ -31,27 +34,45 @@ export function AppShell({
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-hero)] text-primary-foreground font-display text-sm font-bold">
                 M
               </div>
-              <span className="font-display text-lg font-semibold">MessWise</span>
+              <span className="font-display text-lg font-semibold">MessLog</span>
             </Link>
             <span className="hidden rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground sm:inline">
               {role}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-2 sm:gap-4">
+            {role === "student" && (
+              <>
+                <Link
+                  to="/dashboard"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  activeProps={{ className: "text-sm font-semibold text-foreground" }}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/log"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  activeProps={{ className: "text-sm font-semibold text-foreground" }}
+                >
+                  Log meal
+                </Link>
+              </>
+            )}
             <span className="hidden text-sm text-muted-foreground sm:inline">
-              {user.name}
+              {profile?.full_name}
             </span>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                messStore.logout();
-                navigate({ to: "/" });
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/auth" });
               }}
             >
               Sign out
             </Button>
-          </div>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -62,9 +83,4 @@ export function AppShell({
       </main>
     </div>
   );
-}
-
-export function formatINR(n: number) {
-  const sign = n < 0 ? "-" : "";
-  return `${sign}₹${Math.abs(n)}`;
 }
