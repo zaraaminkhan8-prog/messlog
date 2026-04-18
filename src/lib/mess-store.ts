@@ -294,31 +294,44 @@ export const messStore = {
     }
 
     if (during || minutesLeft < 120) {
-      // Release for guards
+      // Release: send a mock SMS to all guards
+      const smsBody = `MessWise: ${meal.studentName}'s ${meal.slot} (₹${meal.price}) is available — claim it at the mess for 50% off (₹${Math.round(meal.price * 0.5)}).`;
+      const newSms: SmsMessage[] = state.guards.map((g) => ({
+        id: crypto.randomUUID(),
+        ts: Date.now(),
+        toName: g.name,
+        toPhone: g.phone,
+        body: smsBody,
+        mealId,
+      }));
       setState((s) => ({
         ...s,
         meals: s.meals.map((m) =>
           m.id === mealId ? { ...m, status: "released" } : m,
         ),
+        smsLog: [...newSms, ...s.smsLog],
       }));
       return {
         ok: true,
-        message: "Released to guards. You'll get 40% if it's claimed.",
+        message: `SMS sent to ${state.guards.length} guards. You'll get 40% if claimed.`,
       };
     }
     return { ok: false, message: "Cannot cancel" };
   },
 
-  // Guard claims a released meal
-  claimMeal: (mealId: string, guardId: string): { ok: boolean; message: string } => {
+  // Admin marks a released meal as claimed by a specific guard (in person)
+  markMealClaimed: (
+    mealId: string,
+    guardId: string,
+  ): { ok: boolean; message: string } => {
     const meal = state.meals.find((m) => m.id === mealId);
-    const guard = state.users.find((u) => u.id === guardId);
+    const guard = state.guards.find((g) => g.id === guardId);
     if (!meal || !guard) return { ok: false, message: "Not found" };
-    if (meal.status !== "released") return { ok: false, message: "Already claimed" };
+    if (meal.status !== "released") return { ok: false, message: "Already processed" };
 
     const guardPays = Math.round(meal.price * 0.5);
     const studentGets = Math.round(meal.price * 0.4);
-    const uniGets = meal.price - guardPays - studentGets; // remainder = 10%
+    const uniGets = meal.price - guardPays - studentGets;
 
     setState((s) => ({
       ...s,
@@ -351,27 +364,17 @@ export const messStore = {
         {
           id: crypto.randomUUID(),
           ts: Date.now(),
-          userId: guard.id,
-          userName: guard.name,
-          type: "guard-payment",
-          amount: -guardPays,
-          note: `Claimed ${meal.studentName}'s ${meal.slot} (paid 50%)`,
-          mealId,
-        },
-        {
-          id: crypto.randomUUID(),
-          ts: Date.now(),
           userId: "uni",
           userName: "University",
           type: "uni-fee",
           amount: uniGets,
-          note: `Service fee: ${meal.slot} claim`,
+          note: `Service fee: ${meal.slot} claim (₹${guardPays} collected from guard at mess)`,
           mealId,
         },
         ...s.transactions,
       ],
     }));
-    return { ok: true, message: `Enjoy your ${meal.slot}, ${guard.name}!` };
+    return { ok: true, message: `Marked claimed by ${guard.name}` };
   },
 
   // Admin: simulate end-of-day so messed-in meals charge wallets
