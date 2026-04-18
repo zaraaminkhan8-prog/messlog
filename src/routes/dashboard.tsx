@@ -67,6 +67,7 @@ function DashboardBody() {
   const refundedFromClaims = meals
     .filter((m) => m.status === "claimed")
     .reduce((s, m) => s + Number(m.price) * 0.4, 0);
+  // Forfeited = cancelled breakfast (full refund) — already excluded from spend.
   const netCost = totalSpent - refundedFromClaims;
   const balance = Number(profile.bank_balance);
   const lowBalance = balance < netCost;

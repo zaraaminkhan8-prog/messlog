@@ -108,14 +108,18 @@ function LogBody() {
 
   async function cancelBreakfast(bundle: BundleSlot) {
     // Breakfast can be cancelled anytime, no surcharge — full refund.
+    // We mark as 'forfeited' (RLS allows UPDATE but not DELETE) and credit back the price.
     if (!user) return;
     setBusy(bundle);
     const date = bundleDates[bundle];
     const slots = BUNDLE_SLOTS[bundle];
     const meals = existing.filter((m) => slots.includes(m.slot) && m.meal_date === date && m.status === "logged");
+    if (meals.length === 0) return setBusy(null);
     const ids = meals.map((m) => m.id);
-    if (ids.length === 0) return setBusy(null);
-    const { error } = await supabase.from("meals").delete().in("id", ids);
+    const { error } = await supabase
+      .from("meals")
+      .update({ status: "forfeited" })
+      .in("id", ids);
     if (error) toast.error(error.message);
     else {
       await supabase.from("transactions").insert(
