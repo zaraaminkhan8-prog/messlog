@@ -3,7 +3,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export type Role = "student" | "guard" | "admin";
+export type Role = "student" | "admin";
 
 export type User = {
   id: string;
@@ -11,7 +11,13 @@ export type User = {
   password: string;
   name: string;
   role: Role;
-  walletBalance: number; // only meaningful for students
+  walletBalance: number;
+};
+
+export type Guard = {
+  id: string;
+  name: string;
+  phone: string;
 };
 
 export type MealSlot = "breakfast" | "lunch" | "snacks" | "dinner";
@@ -20,16 +26,15 @@ export type Meal = {
   id: string;
   studentId: string;
   studentName: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   slot: MealSlot;
   price: number;
-  // lifecycle
   status:
-    | "messed-in" // default
-    | "cancelled-early" // refund 90% / 10% to uni
-    | "released" // available for guard during mess time
-    | "claimed" // guard ate it: 40% to student, 50% guard pays, 10% uni
-    | "consumed"; // student ate
+    | "messed-in"
+    | "cancelled-early"
+    | "released"
+    | "claimed"
+    | "consumed";
   claimedByGuardId?: string;
   claimedByGuardName?: string;
 };
@@ -46,17 +51,27 @@ export type Transaction = {
     | "refund-claimed"
     | "uni-fee"
     | "guard-payment";
-  amount: number; // positive = credit to user, negative = debit
+  amount: number;
   note: string;
   mealId?: string;
 };
 
+export type SmsMessage = {
+  id: string;
+  ts: number;
+  toName: string;
+  toPhone: string;
+  body: string;
+  mealId: string;
+};
+
 type State = {
   users: User[];
+  guards: Guard[];
   meals: Meal[];
   transactions: Transaction[];
+  smsLog: SmsMessage[];
   currentUserId: string | null;
-  // demo "now" — defaults to real now; admin can shift to test refund logic
   clockOffsetMs: number;
 };
 
@@ -99,14 +114,6 @@ function seed(): State {
       walletBalance: 2750,
     },
     {
-      id: "g1",
-      email: "guard1@uni.edu",
-      password: "demo",
-      name: "Ramesh (Gate 2)",
-      role: "guard",
-      walletBalance: 0,
-    },
-    {
       id: "a1",
       email: "admin@uni.edu",
       password: "demo",
@@ -114,6 +121,11 @@ function seed(): State {
       role: "admin",
       walletBalance: 0,
     },
+  ];
+  const guards: Guard[] = [
+    { id: "g1", name: "Ramesh (Gate 2)", phone: "+91 98xxx 11122" },
+    { id: "g2", name: "Suresh (Gate 1)", phone: "+91 98xxx 33344" },
+    { id: "g3", name: "Vikram (Night)", phone: "+91 98xxx 55566" },
   ];
   const today = todayStr(new Date());
   const meals: Meal[] = (["breakfast", "lunch", "snacks", "dinner"] as MealSlot[]).flatMap(
@@ -141,7 +153,15 @@ function seed(): State {
       amount: 3000,
       note: "Monthly mess wallet credit",
     }));
-  return { users, meals, transactions, currentUserId: null, clockOffsetMs: 0 };
+  return {
+    users,
+    guards,
+    meals,
+    transactions,
+    smsLog: [],
+    currentUserId: null,
+    clockOffsetMs: 0,
+  };
 }
 
 function load(): State {
