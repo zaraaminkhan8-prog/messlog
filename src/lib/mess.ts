@@ -1,12 +1,10 @@
-// Pricing & meal-window logic for MessLog.
-// Prices: breakfast ₹350, lunch ₹560, dinner ₹560.
-// Logging window: a meal for date D is opt-in until either
-//   - 10:00 on D (for breakfast/lunch/dinner the same day-before rule)
-// Per spec: "before 10am or after 10pm for the next day".
-// We interpret it as: to log meals for date D you must do so
-// either before 10:00 on D (same day morning) OR after 22:00 on D-1.
+// Pricing & meal-window logic for MessLog @ GIKI.
+// Prices: breakfast Rs 350, lunch Rs 560, dinner Rs 560.
+// Lunch & dinner are bundled — students cannot opt for one without the other.
+// Logging window: before 10:00 AM for today, or after 10:00 PM for tomorrow.
 
 export type Slot = "breakfast" | "lunch" | "dinner";
+export type BundleSlot = "breakfast" | "lunch_dinner";
 
 export const SLOT_PRICE: Record<Slot, number> = {
   breakfast: 350,
@@ -20,12 +18,32 @@ export const SLOT_LABEL: Record<Slot, string> = {
   dinner: "Dinner",
 };
 
+export const BUNDLE_LABEL: Record<BundleSlot, string> = {
+  breakfast: "Breakfast",
+  lunch_dinner: "Lunch + Dinner",
+};
+
+export const BUNDLE_PRICE: Record<BundleSlot, number> = {
+  breakfast: SLOT_PRICE.breakfast,
+  lunch_dinner: SLOT_PRICE.lunch + SLOT_PRICE.dinner,
+};
+
+export const BUNDLE_SLOTS: Record<BundleSlot, Slot[]> = {
+  breakfast: ["breakfast"],
+  lunch_dinner: ["lunch", "dinner"],
+};
+
+export const BUNDLE_ORDER: BundleSlot[] = ["breakfast", "lunch_dinner"];
+
 export const SLOT_ORDER: Slot[] = ["breakfast", "lunch", "dinner"];
 
-export function formatINR(n: number) {
+export function formatPKR(n: number) {
   const sign = n < 0 ? "-" : "";
-  return `${sign}₹${Math.abs(Math.round(n))}`;
+  return `${sign}Rs ${Math.abs(Math.round(n)).toLocaleString("en-PK")}`;
 }
+
+// Backward-compat alias used elsewhere in the codebase.
+export const formatINR = formatPKR;
 
 export function todayISO(d = new Date()) {
   const yyyy = d.getFullYear();
@@ -40,11 +58,10 @@ export function tomorrowISO(d = new Date()) {
   return todayISO(t);
 }
 
-// Returns the date (ISO) you can currently log for, or null if outside window.
 export function activeLoggingDate(now = new Date()): string | null {
   const h = now.getHours();
-  if (h < 10) return todayISO(now); // before 10am — log for today
-  if (h >= 22) return tomorrowISO(now); // after 10pm — log for tomorrow
+  if (h < 10) return todayISO(now);
+  if (h >= 22) return tomorrowISO(now);
   return null;
 }
 
