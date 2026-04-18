@@ -155,7 +155,7 @@ function LogBody() {
               </div>
               {bundle === "lunch_dinner" && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Lunch (Rs 560) + Dinner (Rs 560). Cannot be opted separately.
+                  Lunch + Dinner combined — Rs 560 total. Cannot be opted separately.
                 </p>
               )}
               <div className="mt-4">
