@@ -58,15 +58,20 @@ export function tomorrowISO(d = new Date()) {
   return todayISO(t);
 }
 
-export function activeLoggingDate(now = new Date()): string | null {
-  const h = now.getHours();
-  if (h < 10) return todayISO(now);
-  if (h >= 22) return tomorrowISO(now);
-  return null;
+// Breakfast: log/cancel anytime, no surcharge. Targets today's date.
+// Lunch+Dinner: log anytime; before 14:30 counts for today, 14:30+ rolls to tomorrow.
+export function bundleLoggingDate(bundle: BundleSlot, now = new Date()): string {
+  if (bundle === "breakfast") return todayISO(now);
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return mins >= 14 * 60 + 30 ? tomorrowISO(now) : todayISO(now);
+}
+
+// Kept for compatibility — lunch+dinner cutoff drives the "active" date.
+export function activeLoggingDate(now = new Date()): string {
+  return bundleLoggingDate("lunch_dinner", now);
 }
 
 export function loggingWindowMessage(now = new Date()): string {
-  const date = activeLoggingDate(now);
-  if (date) return `Logging window open for ${date}`;
-  return "Logging window opens after 10:00 PM (for tomorrow)";
+  const ld = bundleLoggingDate("lunch_dinner", now);
+  return `Lunch + Dinner logs apply to ${ld}. Breakfast can be logged anytime, no surcharge.`;
 }
