@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   BUNDLE_PRICE,
   BUNDLE_SLOTS,
   SLOT_PRICE,
-  activeLoggingDate,
+  bundleLoggingDate,
   formatPKR,
   type BundleSlot,
   type Slot,
@@ -42,8 +42,8 @@ function LogPage() {
 
 type BundleState = "none" | "logged" | "released" | "claimed" | "mixed";
 
-function bundleState(meals: Meal[], slots: Slot[]): BundleState {
-  const found = slots.map((s) => meals.find((m) => m.slot === s));
+function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
+  const found = slots.map((s) => meals.find((m) => m.slot === s && m.meal_date === date));
   if (found.every((m) => !m)) return "none";
   if (found.every((m) => m && m.status === "logged")) return "logged";
   if (found.every((m) => m && m.status === "released")) return "released";
@@ -53,32 +53,35 @@ function bundleState(meals: Meal[], slots: Slot[]): BundleState {
 
 function LogBody() {
   const { user } = useAuth();
-  const [date, setDate] = useState<string | null>(null);
   const [existing, setExisting] = useState<Meal[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDate(activeLoggingDate());
+  const bundleDates = useMemo(() => {
+    const map = {} as Record<BundleSlot, string>;
+    for (const b of BUNDLE_ORDER) map[b] = bundleLoggingDate(b);
+    return map;
   }, []);
+  const dates = useMemo(() => Array.from(new Set(Object.values(bundleDates))), [bundleDates]);
 
   useEffect(() => {
-    if (!user || !date) return;
+    if (!user) return;
     void load();
-  }, [user?.id, date]);
+  }, [user?.id, dates.join(",")]);
 
   async function load() {
-    if (!user || !date) return;
+    if (!user) return;
     const { data } = await supabase
       .from("meals")
       .select("id, meal_date, slot, price, status")
       .eq("student_id", user.id)
-      .eq("meal_date", date);
+      .in("meal_date", dates);
     setExisting((data as Meal[]) ?? []);
   }
 
   async function logBundle(bundle: BundleSlot) {
-    if (!user || !date) return;
+    if (!user) return;
     setBusy(bundle);
+    const date = bundleDates[bundle];
     const slots = BUNDLE_SLOTS[bundle];
     const rows = slots.map((slot) => ({
       student_id: user.id,
@@ -103,11 +106,39 @@ function LogBody() {
     setBusy(null);
   }
 
-  async function releaseBundle(bundle: BundleSlot) {
-    if (!user || !date) return;
+  async function cancelBreakfast(bundle: BundleSlot) {
+    // Breakfast can be cancelled anytime, no surcharge — full refund.
+    if (!user) return;
     setBusy(bundle);
+    const date = bundleDates[bundle];
     const slots = BUNDLE_SLOTS[bundle];
-    const ids = existing.filter((m) => slots.includes(m.slot) && m.status === "logged").map((m) => m.id);
+    const meals = existing.filter((m) => slots.includes(m.slot) && m.meal_date === date && m.status === "logged");
+    const ids = meals.map((m) => m.id);
+    if (ids.length === 0) return setBusy(null);
+    const { error } = await supabase.from("meals").delete().in("id", ids);
+    if (error) toast.error(error.message);
+    else {
+      await supabase.from("transactions").insert(
+        meals.map((m) => ({
+          student_id: user.id,
+          amount: Number(m.price),
+          note: `Cancelled ${m.slot} for ${date} — full refund`,
+        })),
+      );
+      toast.success("Cancelled — full refund.");
+    }
+    await load();
+    setBusy(null);
+  }
+
+  async function releaseBundle(bundle: BundleSlot) {
+    if (!user) return;
+    setBusy(bundle);
+    const date = bundleDates[bundle];
+    const slots = BUNDLE_SLOTS[bundle];
+    const ids = existing
+      .filter((m) => slots.includes(m.slot) && m.meal_date === date && m.status === "logged")
+      .map((m) => m.id);
     if (ids.length === 0) return setBusy(null);
     const { error } = await supabase
       .from("meals")
@@ -119,32 +150,24 @@ function LogBody() {
     setBusy(null);
   }
 
-  if (!date) {
-    return (
-      <Card className="rounded-3xl border-border/60 p-8 text-center">
-        <h2 className="font-display text-2xl font-semibold">Logging window is closed</h2>
-        <p className="mt-2 text-muted-foreground">
-          You can log meals <b>before 10:00 AM</b> for today, or <b>after 10:00 PM</b> for tomorrow.
-        </p>
-        <p className="mt-4 text-sm text-muted-foreground">Come back later — meals you've already logged are listed in your dashboard.</p>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <Card className="rounded-3xl border-border/60 bg-[image:var(--gradient-hero)] p-6 text-primary-foreground">
-        <p className="text-sm opacity-80">Logging window open</p>
-        <p className="mt-1 font-display text-3xl font-semibold">For {date}</p>
+        <p className="text-sm opacity-80">Logging is always open</p>
+        <p className="mt-1 font-display text-2xl font-semibold">
+          Lunch + Dinner cutoff is 2:30 PM — after that it rolls to tomorrow.
+        </p>
         <p className="mt-2 text-sm opacity-80">
-          Pick what you'll eat. Lunch and dinner come as a single bundle.
+          Breakfast can be logged or cancelled anytime with no surcharge.
         </p>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {BUNDLE_ORDER.map((bundle) => {
+          const date = bundleDates[bundle];
           const slots = BUNDLE_SLOTS[bundle];
-          const state = bundleState(existing, slots);
+          const state = bundleState(existing, slots, date);
+          const isBreakfast = bundle === "breakfast";
           return (
             <Card key={bundle} className="rounded-2xl border-border/60 p-5">
               <div className="flex items-center justify-between">
@@ -153,11 +176,12 @@ function LogBody() {
                   {formatPKR(BUNDLE_PRICE[bundle])}
                 </p>
               </div>
-              {bundle === "lunch_dinner" && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Lunch + Dinner combined — Rs 560 total. Cannot be opted separately.
-                </p>
-              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                For <b>{date}</b>
+                {isBreakfast
+                  ? " · log or cancel anytime, no surcharge"
+                  : " · cutoff 2:30 PM"}
+              </p>
               <div className="mt-4">
                 {state === "none" ? (
                   <Button
@@ -172,15 +196,27 @@ function LogBody() {
                     <p className="rounded-lg bg-primary/10 p-2 text-center text-xs font-medium text-primary">
                       ✓ Logged
                     </p>
-                    <Button
-                      onClick={() => releaseBundle(bundle)}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      disabled={busy === bundle}
-                    >
-                      Release (40% back if claimed)
-                    </Button>
+                    {isBreakfast ? (
+                      <Button
+                        onClick={() => cancelBreakfast(bundle)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={busy === bundle}
+                      >
+                        Cancel (full refund)
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => releaseBundle(bundle)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={busy === bundle}
+                      >
+                        Release (40% back if claimed)
+                      </Button>
+                    )}
                   </div>
                 ) : state === "released" ? (
                   <p className="rounded-lg bg-accent/30 p-2 text-center text-xs font-medium text-accent-foreground">
@@ -204,8 +240,8 @@ function LogBody() {
       <Card className="rounded-3xl border-border/60 p-6">
         <h2 className="font-display text-lg font-semibold">Today's mess menu pricing</h2>
         <ul className="mt-3 space-y-2 text-sm">
-          <li className="flex justify-between"><span>Breakfast</span><span className="font-semibold">{formatPKR(SLOT_PRICE.breakfast)}</span></li>
-          <li className="flex justify-between"><span>Lunch + Dinner (bundle)</span><span className="font-semibold">{formatPKR(BUNDLE_PRICE.lunch_dinner)}</span></li>
+          <li className="flex justify-between"><span>Breakfast</span><span className="font-semibold">{formatPKR(BUNDLE_PRICE.breakfast)}</span></li>
+          <li className="flex justify-between"><span>Lunch + Dinner (combined)</span><span className="font-semibold">{formatPKR(BUNDLE_PRICE.lunch_dinner)}</span></li>
         </ul>
       </Card>
     </div>
