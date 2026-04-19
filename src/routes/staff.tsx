@@ -91,7 +91,7 @@ function StaffBody() {
         <p className="text-sm opacity-80">Welcome, staff</p>
         <p className="mt-1 font-display text-3xl font-semibold">{released.length} meal{released.length === 1 ? "" : "s"} up for grabs</p>
         <p className="mt-2 text-sm opacity-80">
-          Students released these meals. Claim one and head to the mess — it's yours, free.
+          Students released these meals. Claim one for 50% off — the cost is deducted from your bank balance.
         </p>
       </Card>
 
@@ -103,6 +103,7 @@ function StaffBody() {
         )}
         {released.map((m) => {
           const p = profilesById[m.student_id];
+          const half = Number(m.price) / 2;
           return (
             <Card key={m.id} className="flex flex-col gap-3 rounded-2xl border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -111,11 +112,11 @@ function StaffBody() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Released by {p?.full_name ?? "student"} ({p?.registration_number ?? "—"}) ·
-                  worth {formatINR(Number(m.price))}
+                  pay {formatINR(half)} (50% off {formatINR(Number(m.price))})
                 </p>
               </div>
               <Button onClick={() => claim(m)} disabled={busy === m.id}>
-                {busy === m.id ? "…" : "Claim this meal"}
+                {busy === m.id ? "…" : `Claim for ${formatINR(half)}`}
               </Button>
             </Card>
           );
@@ -134,7 +135,7 @@ function StaffBody() {
                     <p className="text-sm font-medium">{SLOT_LABEL[m.slot]} · {m.meal_date}</p>
                     <p className="text-xs text-muted-foreground">From {p?.full_name ?? "student"}</p>
                   </div>
-                  <p className="font-display text-sm font-semibold text-[color:var(--success)]">FREE</p>
+                  <p className="font-display text-sm font-semibold text-primary">{formatINR(Number(m.price) / 2)}</p>
                 </div>
               );
             })}
