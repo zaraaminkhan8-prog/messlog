@@ -78,13 +78,9 @@ function StaffBody() {
   async function claim(meal: ReleasedMeal) {
     if (!user) return;
     setBusy(meal.id);
-    const { error } = await supabase
-      .from("meals")
-      .update({ status: "claimed", claimed_by: user.id })
-      .eq("id", meal.id)
-      .eq("status", "released");
+    const { error } = await supabase.rpc("claim_meal", { _meal_id: meal.id });
     if (error) toast.error(error.message);
-    else toast.success(`Claimed ${SLOT_LABEL[meal.slot]} on ${meal.meal_date}`);
+    else toast.success(`Claimed ${SLOT_LABEL[meal.slot]} on ${meal.meal_date} for ${formatINR(Number(meal.price) / 2)}`);
     await load();
     setBusy(null);
   }
