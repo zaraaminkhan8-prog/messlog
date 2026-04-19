@@ -115,7 +115,7 @@ function LogBody() {
     }
     if (firstError) toast.error(firstError);
     else toast.success("Cancelled — full refund.");
-    await load();
+    await Promise.all([load(), refreshProfile()]);
     setBusy(null);
   }
 
