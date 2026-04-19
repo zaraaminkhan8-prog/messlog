@@ -195,7 +195,6 @@ function LogBody() {
                       {busy === bundle ? "…" : `Log meal · ${formatPKR(price)}`}
                     </Button>
                   )
-                  </Button>
                 ) : state === "logged" ? (
                   <div className="space-y-2">
                     <p className="rounded-lg bg-primary/10 p-2 text-center text-xs font-medium text-primary">
