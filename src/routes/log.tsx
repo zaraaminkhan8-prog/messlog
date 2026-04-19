@@ -83,54 +83,36 @@ function LogBody() {
     setBusy(bundle);
     const date = bundleDates[bundle];
     const slots = BUNDLE_SLOTS[bundle];
-    const rows = slots.map((slot) => ({
-      student_id: user.id,
-      meal_date: date,
-      slot,
-      price: SLOT_PRICE[slot],
-      status: "logged" as const,
-    }));
-    const { error } = await supabase.from("meals").insert(rows);
-    if (error) toast.error(error.message);
-    else {
-      toast.success(`${BUNDLE_LABEL[bundle]} logged for ${date}`);
-      await supabase.from("transactions").insert(
-        slots.map((slot) => ({
-          student_id: user.id,
-          amount: -SLOT_PRICE[slot],
-          note: `Logged ${slot} for ${date}`,
-        })),
-      );
+    let firstError: string | null = null;
+    for (const slot of slots) {
+      const { error } = await supabase.rpc("log_meal", {
+        _meal_date: date,
+        _slot: slot,
+        _price: SLOT_PRICE[slot],
+      });
+      if (error && !firstError) firstError = error.message;
     }
+    if (firstError) toast.error(firstError);
+    else toast.success(`${BUNDLE_LABEL[bundle]} logged for ${date}`);
     await load();
     setBusy(null);
   }
 
   async function cancelBreakfast(bundle: BundleSlot) {
-    // Breakfast can be cancelled anytime, no surcharge — full refund.
-    // We mark as 'forfeited' (RLS allows UPDATE but not DELETE) and credit back the price.
+    // Breakfast can be cancelled anytime, no surcharge — full refund (server-side).
     if (!user) return;
     setBusy(bundle);
     const date = bundleDates[bundle];
     const slots = BUNDLE_SLOTS[bundle];
     const meals = existing.filter((m) => slots.includes(m.slot) && m.meal_date === date && m.status === "logged");
     if (meals.length === 0) return setBusy(null);
-    const ids = meals.map((m) => m.id);
-    const { error } = await supabase
-      .from("meals")
-      .update({ status: "forfeited" })
-      .in("id", ids);
-    if (error) toast.error(error.message);
-    else {
-      await supabase.from("transactions").insert(
-        meals.map((m) => ({
-          student_id: user.id,
-          amount: Number(m.price),
-          note: `Cancelled ${m.slot} for ${date} — full refund`,
-        })),
-      );
-      toast.success("Cancelled — full refund.");
+    let firstError: string | null = null;
+    for (const m of meals) {
+      const { error } = await supabase.rpc("forfeit_meal", { _meal_id: m.id });
+      if (error && !firstError) firstError = error.message;
     }
+    if (firstError) toast.error(firstError);
+    else toast.success("Cancelled — full refund.");
     await load();
     setBusy(null);
   }

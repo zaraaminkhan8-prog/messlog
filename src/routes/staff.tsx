@@ -61,12 +61,9 @@ function StaffBody() {
     const all = [...((rel as ReleasedMeal[]) ?? []), ...((claimed as ClaimedMeal[]) ?? [])];
     const ids = Array.from(new Set(all.map((m) => m.student_id)));
     if (ids.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, registration_number")
-        .in("user_id", ids);
+      const { data: profs } = await supabase.rpc("get_profile_summary", { _user_ids: ids });
       const map: Record<string, { full_name: string; registration_number: string }> = {};
-      (profs ?? []).forEach((p) => {
+      (profs ?? []).forEach((p: { user_id: string; full_name: string; registration_number: string }) => {
         map[p.user_id] = { full_name: p.full_name, registration_number: p.registration_number };
       });
       setProfilesById(map);

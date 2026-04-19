@@ -81,14 +81,14 @@ function DashboardBody() {
 
   async function saveBalance() {
     const n = Number(balanceInput);
-    if (!Number.isFinite(n) || n < 0) return toast.error("Enter a valid amount");
-    const { error } = await supabase
-      .from("profiles")
-      .update({ bank_balance: n })
-      .eq("user_id", user!.id);
+    if (!Number.isFinite(n) || n <= 0 || n > 100000) {
+      return toast.error("Enter a top-up amount between 1 and 100000");
+    }
+    const { error } = await supabase.rpc("top_up_balance", { _amount: n });
     if (error) return toast.error(error.message);
-    toast.success("Bank balance updated");
+    toast.success(`Topped up by ${formatINR(n)}`);
     setEditingBalance(false);
+    setBalanceInput("");
     await refreshProfile();
   }
 
@@ -127,8 +127,9 @@ function DashboardBody() {
                 onChange={(e) => setBalanceInput(e.target.value)}
                 className="w-28 bg-background text-foreground"
                 type="number"
+                placeholder="Amount"
               />
-              <Button size="sm" onClick={saveBalance}>Save</Button>
+              <Button size="sm" onClick={saveBalance}>Add</Button>
             </div>
           )}
         </div>

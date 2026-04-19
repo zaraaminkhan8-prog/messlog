@@ -145,6 +145,15 @@ export type Database = {
     }
     Functions: {
       claim_meal: { Args: { _meal_id: string }; Returns: undefined }
+      forfeit_meal: { Args: { _meal_id: string }; Returns: undefined }
+      get_profile_summary: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          full_name: string
+          registration_number: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -152,6 +161,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_meal: {
+        Args: {
+          _meal_date: string
+          _price: number
+          _slot: Database["public"]["Enums"]["meal_slot"]
+        }
+        Returns: string
+      }
+      top_up_balance: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
       app_role: "student" | "staff"
