@@ -96,7 +96,7 @@ function LogBody() {
     }
     if (firstError) toast.error(firstError);
     else toast.success(`${BUNDLE_LABEL[bundle]} logged for ${date}`);
-    await load();
+    await Promise.all([load(), refreshProfile()]);
     setBusy(null);
   }
 
