@@ -18,7 +18,6 @@ const signupSchema = z.object({
   password: z.string().min(6).max(72),
   full_name: z.string().trim().min(1).max(100),
   registration_number: z.string().trim().min(1).max(40),
-  role: z.enum(["student", "staff"]),
 });
 
 const loginSchema = z.object({
@@ -37,7 +36,6 @@ function AuthPage() {
     password: "",
     full_name: "",
     registration_number: "",
-    role: "student" as "student" | "staff",
   });
 
   useEffect(() => {
@@ -60,7 +58,6 @@ function AuthPage() {
             data: {
               full_name: v.full_name,
               registration_number: v.registration_number,
-              role: v.role,
             },
           },
         });
@@ -132,24 +129,6 @@ function AuthPage() {
                     placeholder="e.g. 22BCE1234"
                     required
                   />
-                </Field>
-                <Field label="I am a">
-                  <div className="flex gap-2">
-                    {(["student", "staff"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setForm({ ...form, role: r })}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium capitalize transition ${
-                          form.role === r
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card text-muted-foreground"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
                 </Field>
               </>
             )}
