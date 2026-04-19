@@ -54,7 +54,7 @@ function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
 }
 
 function LogBody() {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [existing, setExisting] = useState<Meal[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
