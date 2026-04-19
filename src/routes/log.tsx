@@ -218,7 +218,7 @@ function LogBody() {
                         className="w-full"
                         disabled={busy === bundle}
                       >
-                        Release (40% back if claimed)
+                        Release (50% back if claimed)
                       </Button>
                     )}
                   </div>
