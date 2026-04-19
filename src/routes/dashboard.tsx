@@ -72,7 +72,7 @@ function DashboardBody() {
   const totalSpent = billable.reduce((s, m) => s + Number(m.price), 0);
   const refundedFromClaims = meals
     .filter((m) => m.status === "claimed")
-    .reduce((s, m) => s + Number(m.price) * 0.4, 0);
+    .reduce((s, m) => s + Number(m.price) * 0.5, 0);
   void expiredReleased;
   // Forfeited = cancelled breakfast (full refund) — already excluded from spend.
   const netCost = totalSpent - refundedFromClaims;
