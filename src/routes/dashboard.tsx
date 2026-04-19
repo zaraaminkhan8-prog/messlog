@@ -216,7 +216,7 @@ function StatusBadge({ status }: { status: Meal["status"] }) {
     logged: { label: "Logged", cls: "bg-primary/10 text-primary" },
     eaten: { label: "Eaten", cls: "bg-muted text-muted-foreground" },
     released: { label: "Released (unclaimed — billed)", cls: "bg-accent/30 text-accent-foreground" },
-    claimed: { label: "Claimed (40% back)", cls: "bg-[color:var(--success)]/15 text-[color:var(--success)]" },
+    claimed: { label: "Claimed (50% back)", cls: "bg-[color:var(--success)]/15 text-[color:var(--success)]" },
     forfeited: { label: "Cancelled (full refund)", cls: "bg-destructive/15 text-destructive" },
   };
   const v = map[status];
