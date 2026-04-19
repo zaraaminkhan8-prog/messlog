@@ -42,7 +42,7 @@ function LogPage() {
   );
 }
 
-type BundleState = "none" | "logged" | "released" | "claimed" | "mixed";
+type BundleState = "none" | "logged" | "released" | "claimed" | "forfeited" | "mixed";
 
 function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
   const found = slots.map((s) => meals.find((m) => m.slot === s && m.meal_date === date));
@@ -50,6 +50,7 @@ function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
   if (found.every((m) => m && m.status === "logged")) return "logged";
   if (found.every((m) => m && m.status === "released")) return "released";
   if (found.every((m) => m && m.status === "claimed")) return "claimed";
+  if (found.every((m) => m && m.status === "forfeited")) return "forfeited";
   return "mixed";
 }
 
