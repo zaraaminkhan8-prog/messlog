@@ -138,16 +138,21 @@ function LogBody() {
     setBusy(null);
   }
 
+  const balance = profile ? Number(profile.bank_balance) : 0;
+
   return (
     <div className="space-y-6">
       <Card className="rounded-3xl border-border/60 bg-[image:var(--gradient-hero)] p-6 text-primary-foreground">
-        <p className="text-sm opacity-80">Logging is always open</p>
-        <p className="mt-1 font-display text-2xl font-semibold">
-          Lunch + Dinner cutoff is 2:30 PM — after that it rolls to tomorrow.
-        </p>
-        <p className="mt-2 text-sm opacity-80">
-          Breakfast can be logged or cancelled anytime with no surcharge.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm opacity-80">Your remaining balance</p>
+            <p className="mt-1 font-display text-4xl font-semibold">{formatPKR(balance)}</p>
+          </div>
+          <div className="text-right text-sm opacity-90">
+            <p>Lunch + Dinner: <b>{bundleWindowLabel("lunch_dinner")}</b></p>
+            <p>Breakfast: <b>{bundleWindowLabel("breakfast")}</b></p>
+          </div>
+        </div>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -156,28 +161,40 @@ function LogBody() {
           const slots = BUNDLE_SLOTS[bundle];
           const state = bundleState(existing, slots, date);
           const isBreakfast = bundle === "breakfast";
+          const windowOpen = isBundleWindowOpen(bundle);
+          const price = BUNDLE_PRICE[bundle];
+          const insufficient = balance < price;
           return (
             <Card key={bundle} className="rounded-2xl border-border/60 p-5">
               <div className="flex items-center justify-between">
                 <p className="font-display text-lg font-semibold">{BUNDLE_LABEL[bundle]}</p>
                 <p className="font-display text-lg font-semibold text-primary">
-                  {formatPKR(BUNDLE_PRICE[bundle])}
+                  {formatPKR(price)}
                 </p>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                For <b>{date}</b>
-                {isBreakfast
-                  ? " · log or cancel anytime, no surcharge"
-                  : " · cutoff 2:30 PM"}
+                For <b>{date}</b> · window {bundleWindowLabel(bundle)}
+                {isBreakfast ? " · cancel anytime, full refund" : ""}
               </p>
               <div className="mt-4">
                 {state === "none" ? (
-                  <Button
-                    onClick={() => logBundle(bundle)}
-                    className="w-full"
-                    disabled={busy === bundle}
-                  >
-                    {busy === bundle ? "…" : "Log this meal"}
+                  !windowOpen ? (
+                    <p className="rounded-lg bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
+                      Window closed — opens {bundleWindowLabel(bundle).split(" – ")[0]}
+                    </p>
+                  ) : insufficient ? (
+                    <p className="rounded-lg bg-destructive/15 p-2 text-center text-xs font-medium text-destructive">
+                      Insufficient balance — top up {formatPKR(price - balance)} more
+                    </p>
+                  ) : (
+                    <Button
+                      onClick={() => logBundle(bundle)}
+                      className="w-full"
+                      disabled={busy === bundle}
+                    >
+                      {busy === bundle ? "…" : `Log meal · ${formatPKR(price)}`}
+                    </Button>
+                  )
                   </Button>
                 ) : state === "logged" ? (
                   <div className="space-y-2">
