@@ -62,11 +62,18 @@ function DashboardBody() {
 
   if (!profile) return <p className="text-muted-foreground">Loading your profile…</p>;
 
-  const billable = meals.filter((m) => m.status === "logged" || m.status === "eaten");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  // Released meals that were never claimed by the time their date passes count as
+  // regular billable meals — student gets no refund for an unclaimed release.
+  const expiredReleased = meals.filter((m) => m.status === "released" && m.meal_date < todayStr);
+  const billable = meals.filter(
+    (m) => m.status === "logged" || m.status === "eaten" || (m.status === "released" && m.meal_date < todayStr),
+  );
   const totalSpent = billable.reduce((s, m) => s + Number(m.price), 0);
   const refundedFromClaims = meals
     .filter((m) => m.status === "claimed")
     .reduce((s, m) => s + Number(m.price) * 0.4, 0);
+  void expiredReleased;
   // Forfeited = cancelled breakfast (full refund) — already excluded from spend.
   const netCost = totalSpent - refundedFromClaims;
   const balance = Number(profile.bank_balance);
