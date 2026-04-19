@@ -58,20 +58,44 @@ export function tomorrowISO(d = new Date()) {
   return todayISO(t);
 }
 
-// Breakfast: log/cancel anytime, no surcharge. Targets today's date.
-// Lunch+Dinner: log anytime; before 14:30 counts for today, 14:30+ rolls to tomorrow.
-export function bundleLoggingDate(bundle: BundleSlot, now = new Date()): string {
-  if (bundle === "breakfast") return todayISO(now);
-  const mins = now.getHours() * 60 + now.getMinutes();
-  return mins >= 14 * 60 + 30 ? tomorrowISO(now) : todayISO(now);
+// Logging windows (local time):
+//   Lunch + Dinner: open 14:30 → 10:00 (next morning). Targets the upcoming serving day.
+//   Breakfast:      open 21:00 → 07:00 (next morning). Targets the next morning.
+// Outside the window, logging is closed for that bundle.
+
+function minsNow(now: Date) {
+  return now.getHours() * 60 + now.getMinutes();
 }
 
-// Kept for compatibility — lunch+dinner cutoff drives the "active" date.
+export function isBundleWindowOpen(bundle: BundleSlot, now = new Date()): boolean {
+  const m = minsNow(now);
+  if (bundle === "lunch_dinner") {
+    // 14:30 (870) → 10:00 next day (600). Open if m >= 870 OR m < 600.
+    return m >= 14 * 60 + 30 || m < 10 * 60;
+  }
+  // breakfast: 21:00 (1260) → 07:00 next day (420)
+  return m >= 21 * 60 || m < 7 * 60;
+}
+
+export function bundleLoggingDate(bundle: BundleSlot, now = new Date()): string {
+  const m = minsNow(now);
+  if (bundle === "lunch_dinner") {
+    // After 14:30 → tomorrow's lunch+dinner. Before 10:00 AM → today's.
+    return m >= 14 * 60 + 30 ? tomorrowISO(now) : todayISO(now);
+  }
+  // breakfast: evening window (>=21:00) targets tomorrow; early morning targets today.
+  return m >= 21 * 60 ? tomorrowISO(now) : todayISO(now);
+}
+
+export function bundleWindowLabel(bundle: BundleSlot): string {
+  return bundle === "lunch_dinner" ? "2:30 PM – 10:00 AM" : "9:00 PM – 7:00 AM";
+}
+
+// Kept for compatibility.
 export function activeLoggingDate(now = new Date()): string {
   return bundleLoggingDate("lunch_dinner", now);
 }
 
-export function loggingWindowMessage(now = new Date()): string {
-  const ld = bundleLoggingDate("lunch_dinner", now);
-  return `Lunch + Dinner logs apply to ${ld}. Breakfast can be logged anytime, no surcharge.`;
+export function loggingWindowMessage(): string {
+  return `Lunch + Dinner: 2:30 PM–10:00 AM · Breakfast: 9:00 PM–7:00 AM.`;
 }
