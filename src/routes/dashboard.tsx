@@ -43,7 +43,7 @@ function DashboardBody() {
   useEffect(() => {
     if (!user) return;
     void load();
-    // Realtime subscriptions would be nice but a simple reload is fine for demo.
+    void refreshProfile();
   }, [user?.id]);
 
   async function load() {
