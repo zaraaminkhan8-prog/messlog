@@ -72,7 +72,7 @@ function DashboardBody() {
   const totalSpent = billable.reduce((s, m) => s + Number(m.price), 0);
   const refundedFromClaims = meals
     .filter((m) => m.status === "claimed")
-    .reduce((s, m) => s + Number(m.price) * 0.4, 0);
+    .reduce((s, m) => s + Number(m.price) * 0.5, 0);
   void expiredReleased;
   // Forfeited = cancelled breakfast (full refund) — already excluded from spend.
   const netCost = totalSpent - refundedFromClaims;
@@ -145,7 +145,7 @@ function DashboardBody() {
         <p className="text-xs text-muted-foreground">meals logged</p>
         <div className="mt-4 space-y-1 text-sm">
           <Row label="Gross spent" value={formatINR(totalSpent)} />
-          <Row label="Refunds (40%)" value={`-${formatINR(refundedFromClaims)}`} />
+          <Row label="Refunds (50%)" value={`-${formatINR(refundedFromClaims)}`} />
           <Row label="Net" value={formatINR(netCost)} bold />
         </div>
         <Link to="/log" className="mt-5 block">
@@ -216,7 +216,7 @@ function StatusBadge({ status }: { status: Meal["status"] }) {
     logged: { label: "Logged", cls: "bg-primary/10 text-primary" },
     eaten: { label: "Eaten", cls: "bg-muted text-muted-foreground" },
     released: { label: "Released (unclaimed — billed)", cls: "bg-accent/30 text-accent-foreground" },
-    claimed: { label: "Claimed (40% back)", cls: "bg-[color:var(--success)]/15 text-[color:var(--success)]" },
+    claimed: { label: "Claimed (50% back)", cls: "bg-[color:var(--success)]/15 text-[color:var(--success)]" },
     forfeited: { label: "Cancelled (full refund)", cls: "bg-destructive/15 text-destructive" },
   };
   const v = map[status];

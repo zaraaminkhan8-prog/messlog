@@ -218,7 +218,7 @@ function LogBody() {
                         className="w-full"
                         disabled={busy === bundle}
                       >
-                        Release (40% back if claimed)
+                        Release (50% back if claimed)
                       </Button>
                     )}
                   </div>
@@ -228,7 +228,7 @@ function LogBody() {
                   </p>
                 ) : state === "claimed" ? (
                   <p className="rounded-lg bg-[color:var(--success)]/15 p-2 text-center text-xs font-medium text-[color:var(--success)]">
-                    Claimed — 40% refunded
+                    Claimed — 50% refunded
                   </p>
                 ) : (
                   <p className="rounded-lg bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
