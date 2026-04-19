@@ -42,7 +42,7 @@ function LogPage() {
   );
 }
 
-type BundleState = "none" | "logged" | "released" | "claimed" | "mixed";
+type BundleState = "none" | "logged" | "released" | "claimed" | "forfeited" | "mixed";
 
 function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
   const found = slots.map((s) => meals.find((m) => m.slot === s && m.meal_date === date));
@@ -50,6 +50,7 @@ function bundleState(meals: Meal[], slots: Slot[], date: string): BundleState {
   if (found.every((m) => m && m.status === "logged")) return "logged";
   if (found.every((m) => m && m.status === "released")) return "released";
   if (found.every((m) => m && m.status === "claimed")) return "claimed";
+  if (found.every((m) => m && m.status === "forfeited")) return "forfeited";
   return "mixed";
 }
 
@@ -229,6 +230,10 @@ function LogBody() {
                 ) : state === "claimed" ? (
                   <p className="rounded-lg bg-[color:var(--success)]/15 p-2 text-center text-xs font-medium text-[color:var(--success)]">
                     Claimed — 50% refunded
+                  </p>
+                ) : state === "forfeited" ? (
+                  <p className="rounded-lg bg-destructive/10 p-2 text-center text-xs font-medium text-destructive">
+                    Cancelled — full refund issued
                   </p>
                 ) : (
                   <p className="rounded-lg bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
