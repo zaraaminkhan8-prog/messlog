@@ -145,7 +145,7 @@ function DashboardBody() {
         <p className="text-xs text-muted-foreground">meals logged</p>
         <div className="mt-4 space-y-1 text-sm">
           <Row label="Gross spent" value={formatINR(totalSpent)} />
-          <Row label="Refunds (40%)" value={`-${formatINR(refundedFromClaims)}`} />
+          <Row label="Refunds (50%)" value={`-${formatINR(refundedFromClaims)}`} />
           <Row label="Net" value={formatINR(netCost)} bold />
         </div>
         <Link to="/log" className="mt-5 block">
