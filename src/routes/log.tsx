@@ -231,6 +231,10 @@ function LogBody() {
                   <p className="rounded-lg bg-[color:var(--success)]/15 p-2 text-center text-xs font-medium text-[color:var(--success)]">
                     Claimed — 50% refunded
                   </p>
+                ) : state === "forfeited" ? (
+                  <p className="rounded-lg bg-destructive/10 p-2 text-center text-xs font-medium text-destructive">
+                    Cancelled — full refund issued
+                  </p>
                 ) : (
                   <p className="rounded-lg bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
                     Mixed status
