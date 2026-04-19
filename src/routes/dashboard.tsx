@@ -215,9 +215,9 @@ function StatusBadge({ status }: { status: Meal["status"] }) {
   const map: Record<Meal["status"], { label: string; cls: string }> = {
     logged: { label: "Logged", cls: "bg-primary/10 text-primary" },
     eaten: { label: "Eaten", cls: "bg-muted text-muted-foreground" },
-    released: { label: "Released", cls: "bg-accent/30 text-accent-foreground" },
+    released: { label: "Released (unclaimed — billed)", cls: "bg-accent/30 text-accent-foreground" },
     claimed: { label: "Claimed (40% back)", cls: "bg-[color:var(--success)]/15 text-[color:var(--success)]" },
-    forfeited: { label: "Forfeited (0%)", cls: "bg-destructive/15 text-destructive" },
+    forfeited: { label: "Cancelled (full refund)", cls: "bg-destructive/15 text-destructive" },
   };
   const v = map[status];
   return (
